@@ -1,0 +1,14 @@
+lctemp (1.0.0) stable; urgency=low
+
+  * Initial release
+  * CPU temperature monitoring for Intel and AMD processors
+  * Core temperature display
+  * CPU usage percentage
+  * Max/Min usage tracking
+  * Fan speed display (hardware dependent)
+  * Battery power for laptops
+  - System tray support (Beta - Cinnamon/KDE)
+  * Dark and Light theme support
+  * Turkish and English language support
+
+ -- LCTemp <lctemp@example.com>  Wed, 26 Mar 2026 00:00:00 +0000

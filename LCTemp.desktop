@@ -1,0 +1,11 @@
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=LCTemp
+Comment=Linux CPU sıcaklık izleme uygulaması
+Exec=/opt/lctemp/lctemp-desktop-launcher.sh
+Icon=utilities-system-monitor
+Terminal=false
+Categories=System
+StartupNotify=true

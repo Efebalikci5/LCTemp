@@ -1,0 +1,18 @@
+Package: lctemp
+Version: 1.0.0-1
+Section: utils
+Priority: optional
+Architecture: all
+Depends: python3, python3-tk, python3-pystray, python3-pillow
+Maintainer: LCTemp <lctemp@example.com>
+Description: Linux CPU sıcaklık izleme uygulaması
+ LCTemp, Linux tabanlı sistemlerde Intel ve AMD işlemciler için görsel 
+ arayüzlü CPU sıcaklık izleme uygulamasıdır.
+ .
+ Özellikler:
+  - CPU sıcaklık izleme
+  - Çekirdek izleme
+  - CPU kullanım oranı
+  - Max/Min izleme
+  - Sistem tepsisi desteği (Cinnamon/KDE)
+  - Tema ve dil desteği

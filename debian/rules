@@ -1,0 +1,10 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_install:
+	dh_install lctemp_monitor.py usr/bin/lctemp
+	dh_install lctemp.sh usr/bin/lctemp-launcher
+	dh_install LCTemp.desktop usr/share/applications/
+	dh_install LICENSE usr/share/licenses/lctemp/
