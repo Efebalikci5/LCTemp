@@ -4,11 +4,24 @@ LCTemp - Linux Control Temp
 Intel ve AMD işlemciler için görsel arayüzlü sıcaklık izleme uygulaması
 """
 
+__version__ = "1.0.0"
+
 import os
 import sys
 import glob
 import time
 import json
+import re
+import subprocess
+import threading
+import logging
+
+# Logging yapılandırması
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('LCTemp')
 
 # Tkinter bağımlılığını güvenli yakalama
 try:
@@ -137,8 +150,11 @@ class LCTemp:
             'menu_cpu_usage': 'İşlemci Kullanımı',
             'menu_cores': 'Çekirdekler',
             'menu_about': 'Hakkında',
+            'interval_second': 'saniye',
+            'interval_recommended': 'Önerilen',
+            'sensor_info': 'Sensör: {sensor} | Okuma: {count} değer | Aralık: {interval}s',
             'about_title': 'LCTemp - Hakkında',
-            'about_text': 'LCTemp - Linux Control Temp\n\nVersiyon: 1.0.0\n\nefebalikci9@gmail.com\nhttps://github.com/Efebalikci5/LCTemp\n\nÖzellikler:\n• Linux\'ta işlemci sıcaklığı ölçme\n• İşlemci kullanım oranı görüntüleme\n• İşlemcinin max ve min kullanım oranını görüntüleme\n• KDE ve Cinnamon masaüstüleri için sistem tepsisinden sıcaklık kontrolü (Geliştirme aşamasında)'
+            'about_text': f'LCTemp - Linux Control Temp\n\nVersiyon: {__version__}\n\nefebalikci9@gmail.com\nhttps://github.com/Efebalikci5/LCTemp\n\nÖzellikler:\n• Linux\'ta işlemci sıcaklığı ölçme\n• İşlemci kullanım oranı görüntüleme\n• İşlemcinin max ve min kullanım oranını görüntüleme\n• KDE ve Cinnamon masaüstüleri için sistem tepsisinden sıcaklık kontrolü (Geliştirme aşamasında)'
         },
         'en': {
             'title': '🖥️ Linux Control Temp',
@@ -173,8 +189,11 @@ class LCTemp:
             'menu_cpu_usage': 'CPU Usage',
             'menu_cores': 'Cores',
             'menu_about': 'About',
+            'interval_second': 'second',
+            'interval_recommended': 'Recommended',
+            'sensor_info': 'Sensor: {sensor} | Reading: {count} values | Interval: {interval}s',
             'about_title': 'LCTemp - About',
-            'about_text': 'LCTemp - Linux Control Temp\n\nVersion: 1.0.0\n\nefebalikci9@gmail.com\nhttps://github.com/Efebalikci5/LCTemp\n\nFeatures:\n• CPU temperature measurement on Linux\n• CPU usage percentage display\n• CPU max and min usage rate display\n• System tray temperature monitoring for KDE and Cinnamon desktops (In Development)'
+            'about_text': f'LCTemp - Linux Control Temp\n\nVersion: {__version__}\n\nefebalikci9@gmail.com\nhttps://github.com/Efebalikci5/LCTemp\n\nFeatures:\n• CPU temperature measurement on Linux\n• CPU usage percentage display\n• CPU max and min usage rate display\n• System tray temperature monitoring for KDE and Cinnamon desktops (In Development)'
         }
     }
     def __init__(self, root):
@@ -248,9 +267,9 @@ class LCTemp:
         
         # Masaüstü ortamı hakkında bilgi yazdır
         if self.is_cinnamon or self.is_kde:
-            print(f"Algılanan masaüstü ortamı: {self.desktop_environment.upper()} - Sistem tepsisi destekleniyor")
+            logger.info(f"Algılanan masaüstü ortamı: {self.desktop_environment.upper()} - Sistem tepsisi destekleniyor")
         else:
-            print(f"Algılanan masaüstü ortamı: {self.desktop_environment.upper()} - Sistem tepsisi yalnızca Cinnamon/KDE'de çalışır")
+            logger.info(f"Algılanan masaüstü ortamı: {self.desktop_environment.upper()} - Sistem tepsisi yalnızca Cinnamon/KDE'de çalışır")
         
         # Sıcaklık okuma döngüsünü başlat
         self.update_temperature()
@@ -265,7 +284,6 @@ class LCTemp:
     
     def _find_font(self, size=14):
         """Sistem fontunu bulur - Linux dağıtımından bağımsız (fc-match ile)"""
-        import subprocess
         
         # fc-match ile sistemden font yolunu al
         try:
@@ -291,12 +309,12 @@ class LCTemp:
         for font_path in font_paths:
             try:
                 return ImageFont.truetype(font_path, size)
-            except:
+            except Exception:
                 continue
         # Fallback to default
         try:
             return ImageFont.load_default()
-        except:
+        except Exception:
             return None
 
     def create_tray_icon_image(self, temp):
@@ -361,7 +379,7 @@ class LCTemp:
             )
             self.tray_icon = pystray.Icon("LCTemp", icon_image, "LCTemp", menu)
         except Exception as e:
-            print(f"Sistem tepsisi kurulum hatası: {e}")
+            logger.error(f"Sistem tepsisi kurulum hatası: {e}")
     
     def update_system_tray(self):
         if not PYSTRAY_AVAILABLE or not self.tray_icon or not self.system_tray_enabled:
@@ -373,7 +391,7 @@ class LCTemp:
             tooltip_text = f"LCTemp\n{self.current_temp:.1f}°C\n{self.lang['cpu']}: {self.current_usage:.1f}%"
             self.tray_icon.title = tooltip_text
         except Exception as e:
-            print(f"Sistem tepsisi güncelleme hatası: {e}")
+            logger.error(f"Sistem tepsisi güncelleme hatası: {e}")
     
     def show_window(self, icon=None, item=None):
         self.root.after(0, self.root.deiconify)
@@ -454,7 +472,7 @@ class LCTemp:
                 try:
                     with open(max_freq_path, 'r') as f:
                         self.max_cpu_freq = int(f.read().strip()) / 1000  # MHz
-                except:
+                except Exception:
                     self.max_cpu_freq = 3000  # Varsayılan değer
             
             with open(self.cpu_freq_path, 'r') as f:
@@ -559,11 +577,13 @@ class LCTemp:
         # Okuma aralığı alt menüsü
         interval_menu = tk.Menu(settings_menu, tearoff=0)
         settings_menu.add_cascade(label=self.lang['menu_interval'], menu=interval_menu)
-        interval_menu.add_radiobutton(label="1 saniye", command=lambda: self.set_interval(1), variable=self.interval_var)
-        interval_menu.add_radiobutton(label="2 saniye (Önerilen)", command=lambda: self.set_interval(2), variable=self.interval_var)
-        interval_menu.add_radiobutton(label="4 saniye", command=lambda: self.set_interval(4), variable=self.interval_var)
-        interval_menu.add_radiobutton(label="6 saniye", command=lambda: self.set_interval(6), variable=self.interval_var)
-        interval_menu.add_radiobutton(label="10 saniye", command=lambda: self.set_interval(10), variable=self.interval_var)
+        sec = self.lang['interval_second']
+        rec = self.lang['interval_recommended']
+        interval_menu.add_radiobutton(label=f"1 {sec}", command=lambda: self.set_interval(1), variable=self.interval_var)
+        interval_menu.add_radiobutton(label=f"2 {sec} ({rec})", command=lambda: self.set_interval(2), variable=self.interval_var)
+        interval_menu.add_radiobutton(label=f"4 {sec}", command=lambda: self.set_interval(4), variable=self.interval_var)
+        interval_menu.add_radiobutton(label=f"6 {sec}", command=lambda: self.set_interval(6), variable=self.interval_var)
+        interval_menu.add_radiobutton(label=f"10 {sec}", command=lambda: self.set_interval(10), variable=self.interval_var)
         
         # Görüntüleme seçenekleri alt menüsü
         display_menu = tk.Menu(settings_menu, tearoff=0)
@@ -632,7 +652,7 @@ class LCTemp:
             with open(config_path, 'w') as f:
                 json.dump(settings, f)
         except Exception as e:
-            print(f"Ayarlar kaydedilirken hata: {e}")
+            logger.error(f"Ayarlar kaydedilirken hata: {e}")
     
     def load_settings(self):
         """Kullanıcı ayarlarını yükler"""
@@ -674,7 +694,7 @@ class LCTemp:
                 if 'system_tray' in settings:
                     self.tray_var.set(settings['system_tray'])
         except Exception as e:
-            print(f"Ayarlar yüklenirken hata: {e}")
+            logger.error(f"Ayarlar yüklenirken hata: {e}")
     
     def toggle_display_item(self):
         self.show_cpu_usage = self.display_var_cpu.get()
@@ -686,7 +706,6 @@ class LCTemp:
     
     def read_fan_speed(self):
         """Fan hızını okur - birden fazla yöntem dener"""
-        import subprocess
         
         # Yöntem 1: hwmon'dan fan hızını dene
         if self.sensor_path:
@@ -720,7 +739,7 @@ class LCTemp:
             if result.returncode == 0:
                 output = result.stdout
                 # fan regex: fan1: xxx RPM
-                import re
+
                 fan_matches = re.findall(r'fan\d+:\s*(\d+)\s*RPM', output, re.IGNORECASE)
                 if fan_matches:
                     return int(fan_matches[0])
@@ -801,7 +820,7 @@ class LCTemp:
                 self.setup_system_tray()
             
             if self.tray_icon and (not hasattr(self, 'tray_thread') or not self.tray_thread.is_alive()):
-                import threading
+
                 self.tray_thread = threading.Thread(target=self.tray_icon.run, daemon=True)
                 self.tray_thread.start()
                 self.root.withdraw()
@@ -825,14 +844,14 @@ class LCTemp:
         main_frame.pack(fill=tk.BOTH, expand=True)
         
         # Başlık
-        title_font = tkfont.Font(family="Arial", size=16, weight="bold")
+        title_font = tkfont.Font(family="DejaVu Sans", size=16, weight="bold")
         title_label = tk.Label(main_frame, text=self.lang['title'], font=title_font, bg=t['bg'], fg=t['fg'])
         title_label.pack(pady=(0, 10))
         
         # Sıcaklık göstergesi
         self.widgets['temp_label'] = tk.Label(
             main_frame, text="--.- " + self.lang['temp'],
-            font=tkfont.Font(family="Arial", size=52, weight="bold"),
+            font=tkfont.Font(family="DejaVu Sans", size=52, weight="bold"),
             bg=t['bg'], fg=t['fg_muted']
         )
         self.widgets['temp_label'].pack(pady=5)
@@ -840,7 +859,7 @@ class LCTemp:
         # Durum
         self.widgets['status_label'] = tk.Label(
             main_frame, text=self.lang['sensor_wait'],
-            font=tkfont.Font(family="Arial", size=11),
+            font=tkfont.Font(family="DejaVu Sans", size=11),
             bg=t['bg'], fg=t['fg_muted']
         )
         self.widgets['status_label'].pack(pady=2)
@@ -858,7 +877,7 @@ class LCTemp:
             
             self.widgets['usage_label'] = tk.Label(
                 usage_frame, text=f"{self.lang['cpu']}: --.-%",
-                font=tkfont.Font(family="Arial", size=11),
+                font=tkfont.Font(family="DejaVu Sans", size=11),
                 bg=t['bg'], fg="#00bfff"
             )
             self.widgets['usage_label'].pack()
@@ -869,7 +888,7 @@ class LCTemp:
         
         self.widgets['throttle_label'] = tk.Label(
             throttle_frame, text="CPU: -- MHz",
-            font=tkfont.Font(family="Arial", size=10),
+            font=tkfont.Font(family="DejaVu Sans", size=10),
             bg=t['bg'], fg=t['fg']
         )
         self.widgets['throttle_label'].pack()
@@ -881,7 +900,7 @@ class LCTemp:
             
             self.widgets['fan_label'] = tk.Label(
                 fan_frame, text=f"{self.lang['menu_fan_speed']}: -- RPM",
-                font=tkfont.Font(family="Arial", size=11),
+                font=tkfont.Font(family="DejaVu Sans", size=11),
                 bg=t['bg'], fg="#98d8c8"
             )
             self.widgets['fan_label'].pack()
@@ -893,7 +912,7 @@ class LCTemp:
             
             self.widgets['battery_label'] = tk.Label(
                 battery_frame, text=f"{self.lang['menu_battery']}: -- W",
-                font=tkfont.Font(family="Arial", size=11),
+                font=tkfont.Font(family="DejaVu Sans", size=11),
                 bg=t['bg'], fg="#f7dc6f"
             )
             self.widgets['battery_label'].pack()
@@ -905,7 +924,7 @@ class LCTemp:
             
             self.widgets['cores_label'] = tk.Label(
                 cores_frame, text=f"{self.lang['cores']}: -",
-                font=tkfont.Font(family="Arial", size=9),
+                font=tkfont.Font(family="DejaVu Sans", size=9),
                 bg=t['bg'], fg=t['fg_secondary'], wraplength=350
             )
             self.widgets['cores_label'].pack()
@@ -916,14 +935,14 @@ class LCTemp:
         
         self.widgets['max_label'] = tk.Label(
             minmax_frame, text=f"{self.lang['max']}: --.-{self.lang['temp']}",
-            font=tkfont.Font(family="Arial", size=10, weight="bold"),
+            font=tkfont.Font(family="DejaVu Sans", size=10, weight="bold"),
             bg=t['bg'], fg="#ff6b6b"
         )
         self.widgets['max_label'].pack(side=tk.LEFT, padx=20)
         
         self.widgets['min_label'] = tk.Label(
             minmax_frame, text=f"{self.lang['min']}: --.-{self.lang['temp']}",
-            font=tkfont.Font(family="Arial", size=10, weight="bold"),
+            font=tkfont.Font(family="DejaVu Sans", size=10, weight="bold"),
             bg=t['bg'], fg="#4ecdc4"
         )
         self.widgets['min_label'].pack(side=tk.RIGHT, padx=20)
@@ -931,7 +950,7 @@ class LCTemp:
         # Sensör bilgisi
         self.widgets['sensor_info_label'] = tk.Label(
             main_frame, text="",
-            font=tkfont.Font(family="Arial", size=8),
+            font=tkfont.Font(family="DejaVu Sans", size=8),
             bg=t['bg'], fg=t['fg_muted']
         )
         self.widgets['sensor_info_label'].pack(side=tk.BOTTOM, pady=(5, 0))
@@ -944,7 +963,7 @@ class LCTemp:
             command=self.toggle_system_tray,
             bg=t['bg'], fg=t['fg_secondary'],
             selectcolor=t['input_bg'],
-            font=tkfont.Font(family="Arial", size=9),
+            font=tkfont.Font(family="DejaVu Sans", size=9),
             activebackground=t['bg'], activeforeground=t['fg_secondary']
         )
         self.widgets['tray_checkbox'].pack(side=tk.BOTTOM, pady=(5, 0))
@@ -1041,7 +1060,11 @@ class LCTemp:
             
             if self.sensor_name:
                 self.widgets['sensor_info_label'].config(
-                    text=f"Sensör: {self.sensor_name} | Okuma: {len(all_temps)} değer | Aralık: {self.read_interval}s"
+                    text=self.lang['sensor_info'].format(
+                        sensor=self.sensor_name,
+                        count=len(all_temps),
+                        interval=self.read_interval
+                    )
                 )
             
         else:
@@ -1062,14 +1085,29 @@ class LCTemp:
 
 def main():
     root = tk.Tk()
+    
+    # Uygulama ikonunu ayarla
+    icon_paths = [
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lctemp.png'),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'lctemp.png'),
+        '/usr/share/icons/hicolor/256x256/apps/lctemp.png',
+        '/usr/share/pixmaps/lctemp.png',
+    ]
+    for icon_path in icon_paths:
+        if os.path.exists(icon_path):
+            try:
+                icon_image = tk.PhotoImage(file=icon_path)
+                root.iconphoto(True, icon_image)
+                break
+            except Exception:
+                pass
+    
     app = LCTemp(root)
     root.mainloop()
 
 
 if __name__ == "__main__":
-    print("=" * 50)
-    print("LCTemp - Linux CPU Sıcaklık Monitörü")
-    print("=" * 50)
-    print("Usage: python3 lctemp_monitor.py")
-    print("=" * 50)
+    logger.info("=" * 50)
+    logger.info("LCTemp - Linux CPU Sıcaklık Monitörü")
+    logger.info("=" * 50)
     main()
