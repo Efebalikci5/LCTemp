@@ -19,5 +19,6 @@ modules:
       - install -D -m 644 LCTemp.desktop /app/share/applications/com.github.efebalikci5.lctemp.desktop
       - install -D -m 644 com.github.efebalikci5.lctemp.metainfo.xml /app/share/metainfo/com.github.efebalikci5.lctemp.metainfo.xml
     sources:
-      - type: dir
-        path: .
+      - type: git
+        url: https://github.com/Efebalikci5/LCTemp.git
+        branch: main
