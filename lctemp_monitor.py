@@ -15,6 +15,7 @@ import re
 import subprocess
 import threading
 import logging
+import urllib.request
 
 # Logging yapılandırması
 logging.basicConfig(
@@ -270,6 +271,9 @@ class LCTemp:
             logger.info(f"Algılanan masaüstü ortamı: {self.desktop_environment.upper()} - Sistem tepsisi destekleniyor")
         else:
             logger.info(f"Algılanan masaüstü ortamı: {self.desktop_environment.upper()} - Sistem tepsisi yalnızca Cinnamon/KDE'de çalışır")
+        
+        # Güncelleme kontrolü
+        threading.Thread(target=self.check_for_updates, daemon=True).start()
         
         # Sıcaklık okuma döngüsünü başlat
         self.update_temperature()
@@ -1076,6 +1080,28 @@ class LCTemp:
         
         self.root.after(self.read_interval * 1000, self.update_temperature)
     
+    def check_for_updates(self):
+        try:
+            req = urllib.request.Request(
+                "https://api.github.com/repos/Efebalikci5/LCTemp/releases/latest",
+                headers={'User-Agent': 'LCTemp-Update-Checker'}
+            )
+            with urllib.request.urlopen(req, timeout=5) as response:
+                if response.status == 200:
+                    data = json.loads(response.read().decode('utf-8'))
+                    latest_version = data.get('tag_name', '').lstrip('v')
+                    current_version = __version__.lstrip('v')
+                    
+                    if latest_version and latest_version != current_version:
+                        # Simple version check
+                        if latest_version > current_version:
+                            self.root.after(2000, lambda: messagebox.showinfo(
+                                "Yeni Sürüm Mevcut", 
+                                f"LCTemp için daha yeni bir sürüm bulundu!\n\nMevcut Sürüm: {current_version}\nYeni Sürüm: {latest_version}\n\nDetaylar için GitHub sayfasını ziyaret edebilirsiniz."
+                            ))
+        except Exception as e:
+            logger.debug(f"Güncelleme kontrolü başarısız: {e}")
+
     def on_close(self):
         self.running = False
         if self.tray_icon:

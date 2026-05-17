@@ -124,7 +124,17 @@ DESKTOP
     cp "$APPDIR/lctemp.desktop" "$APPDIR/usr/share/applications/lctemp.desktop"
     
     # AppRun
-    cp "$SCRIPT_DIR/appimage/AppRun" "$APPDIR/AppRun"
+    cat > "$APPDIR/AppRun" << 'APPRUN'
+#!/bin/bash
+HERE="$(dirname "$(readlink -f "${0}")")"
+export PATH="${HERE}/usr/bin:${PATH}"
+export PYTHONPATH="${HERE}/usr/lib/python3/site-packages:${HERE}/usr/lib/python3:${PYTHONPATH}"
+export LD_LIBRARY_PATH="${HERE}/usr/lib:${LD_LIBRARY_PATH}"
+export TCL_LIBRARY="${HERE}/usr/lib/tcl8.6"
+export TK_LIBRARY="${HERE}/usr/lib/tk8.6"
+
+exec "${HERE}/usr/bin/python3" "${HERE}/usr/app/lctemp_monitor.py" "$@"
+APPRUN
     chmod +x "$APPDIR/AppRun"
     
     # AppStream metainfo

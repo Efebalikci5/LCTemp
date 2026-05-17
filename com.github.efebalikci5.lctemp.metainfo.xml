@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.github.efebalikci5.lctemp</id>
+  <name>LCTemp</name>
+  <summary>CPU Temperature Monitor for Linux</summary>
+  <metadata_license>FSFAP</metadata_license>
+  <project_license>GPL-2.0-or-later</project_license>
+  <description>
+    <p>LCTemp is a GUI-based CPU temperature monitoring application for Intel and AMD processors on Linux systems. It provides an intuitive interface to track your system's heat in real-time.</p>
+    <p>Features:</p>
+    <ul>
+      <li>CPU temperature measurement on Linux</li>
+      <li>CPU usage percentage display</li>
+      <li>CPU max and min usage rate display</li>
+      <li>System tray temperature monitoring (Cinnamon/KDE)</li>
+      <li>Support for dark and light themes</li>
+    </ul>
+  </description>
+  <url type="homepage">https://github.com/Efebalikci5/LCTemp</url>
+  <url type="bugtracker">https://github.com/Efebalikci5/LCTemp/issues</url>
+  <launchable type="desktop-id">com.github.efebalikci5.lctemp.desktop</launchable>
+  <developer id="com.github.efebalikci5">
+    <name>Efe Balıkçı</name>
+  </developer>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/Efebalikci5/LCTemp/main/lctemp.png</image>
+    </screenshot>
+  </screenshots>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="1.0.0" date="2026-05-17"/>
+  </releases>
+</component>
