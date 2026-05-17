@@ -2,6 +2,8 @@
 
 LCTemp is a GUI-based CPU temperature monitoring application for Intel and AMD processors on Linux-based systems.
 
+<img width="423" height="481" alt="Ekran Görüntüsü_20260517_211849" src="https://github.com/user-attachments/assets/05863681-9540-4bc7-84c0-575e7c8d5b29" />
+
 ## Features
 
 - **CPU Temperature Monitoring**: Reading temperatures from Intel (coretemp) and AMD (k10temp, zen) sensors
